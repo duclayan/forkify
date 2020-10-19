@@ -38,16 +38,21 @@ searchForm.onsubmit = async function (e) {
 //                                                        RECIPE CLICK
 // ====================================================================================================================================
 
+let hasPreviews = false
 document.querySelector('.results__list').onclick = async function(e) {
 
-    e.preventDefault()
-// ====================================================================================================================================
-//                                                 CLASSES TO ORGANIZE THE CONTENTS
-// ====================================================================================================================================
+    if ( hasPreviews == true) {
+        document.querySelector('.recipe').innerHTML = ' '
+        document.querySelector('.results__link--active').classList.remove('results__link--active')
+    }
 
+    e.preventDefault()
+    hasPreviews = true
+    
     // Access Recipe List
     let n = (e.path[2].className === 'results__link') ? 2:0;
 
+    //story current class
     e.path[n].classList.add('results__link--active')
     let recipeID = e.path[n].href.split("#")
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              
@@ -71,28 +76,11 @@ document.querySelector('.results__list').onclick = async function(e) {
 
     appendRecipeHeader(currentRecipe.content)
     appendRecipeDetails(currentRecipe)
-
-    // // ADD TO CART
-    // document.querySelector('.btn-small.recipe__btn').onclick = async function(x){
-
-    //     var recipeItems = document.getElementsByClassName('recipe__item')
-    //     console.log(recipeItems)
-    
-    //     for (i = 0; i < recipeItems.length; i++) {
-    //     //     console.log(recipeItems[i])
-    //     //    let count = recipeItems[i].querySelector('.recipe__count').innerHTML
-    //     //    let unit = recipeItems[i].querySelector('.recipe__unit').innerHTML
-    //     //    let ingredient = recipeItems[i].querySelector('.recipe__ingredient').innertext
-    
-    //     //    console.log(`Count: ${count}, Unit: ${unit}, Ingredient: ${ingredient}`)
-
-    //     console.log(isMeasured(recipeItems[i]))
-    //     }
-    
-    // }
 }
 
-// CLASS
+// ====================================================================================================================================
+//                                        CLASS DECLARATIONS: RECIPEDISPLAY , INGREDIENT
+// ====================================================================================================================================
 
 class recipeDisplay {
     
@@ -153,8 +141,6 @@ class recipeDisplay {
                 return (eval(text[0]) + eval(text[1])).toFixed(1)
             }
         }
-
-        
     }
 
     getItemDescription(content){
@@ -179,7 +165,10 @@ class recipeDisplay {
         const periods = Math.ceil(numIng / 3);
         this.time = periods * 15;
         console.log(this.content)
+    }
 
+    getServings(stat){
+        this.servings = `${this.servings} ${stat} 1`
     }
     
   }
@@ -286,6 +275,11 @@ const appendRecipeDetails = async function (item) {
 
     </div>
     `
+    let people = document.querySelector('.recipe__info-data recipe__info-data--people')
+    
+    let peopleButton = people.querySelector('.recipe__info-buttons')
+    let choice = peopleButton.getElementsByClassName('btn-tiny')
+    console.log(choice)
     displayColumn.insertAdjacentHTML('beforeend',recipe_infoHTML)
 }
 // ==================================================================================================================================================================
