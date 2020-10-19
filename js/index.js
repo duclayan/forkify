@@ -5,6 +5,7 @@ var searchForm = document.querySelector('.search')
 var recipeColumn = document.querySelector('.results__list')
 var displayColumn = document.querySelector('.recipe')
 var addToCart = document.querySelector('.btn-small.recipe__btn')
+var shoppingListColumn = document.querySelector('.shopping')
 console.log(addToCart)
 
 var searchResult =''
@@ -24,31 +25,61 @@ const getRecipe = async function(id) {
 
 searchForm.onsubmit = async function (e) {
         recipeColumn.innerHTML = ''
-        console.log('Search Submit')
 
         e.preventDefault()
         var recipeList= await searchRecipe(searchItem.value)
+        recipeList = new page (recipeList.recipes)
+        console.log(recipeList)
+        // appendResultsList(recipeList.recipes)
 
-        recipeList.recipes.forEach((item)=> {
-            appendResultsList(item)
-            console.log(item)
-        })
+        var pages = []
+        for (let i = 0 ; i < Math.ceil(recipeList.item.length / 10); i++) {
+            if ( (i+1) === Math.ceil(recipeList.item.length / 10)) {
+                pages[i] = recipeList.item.slice(i,i+(recipeList.item.length % 10))
+            } else {
+                pages[i] = recipeList.item.slice(i,i+10)
+            }
+        }
+
+        appendResultsList(pages)
 }
 // ====================================================================================================================================
 //                                                        RECIPE CLICK
 // ====================================================================================================================================
 
-let hasPreviews = false
+var hasPreviews = false
 document.querySelector('.results__list').onclick = async function(e) {
 
-    if ( hasPreviews == true) {
-        document.querySelector('.recipe').innerHTML = ' '
-        document.querySelector('.results__link--active').classList.remove('results__link--active')
+    function checkStat(status) {
+        return new Promise((resolve,reject) => {
+            if (status === true) {
+                console.log('true')
+                resolve (true)
+            } else {
+                console.log('false')
+                reject (false)
+            }
+        })
     }
+
+    async function update(){
+        console.log(hasPreviews)
+        try {
+            hasPreviews = await checkStat(hasPreviews)
+            console.log('success')
+            document.querySelector('.recipe').innerHTML = ' '
+            document.querySelector('.results__link--active').classList.remove('results__link--active')
+        } catch (err){
+            console.log('error')
+            hasPreviews = false
+        }
+    }
+
 
     e.preventDefault()
     hasPreviews = true
-    
+    update()
+
     // Access Recipe List
     let n = (e.path[2].className === 'results__link') ? 2:0;
 
@@ -62,20 +93,24 @@ document.querySelector('.results__list').onclick = async function(e) {
 
     // Create SUPER Class/ General Class 
     currentRecipe = new recipeDisplay(title,ingredients)
+    console.log('CURRENT RECIPE')
+    console.log(currentRecipe)
     
     // Creates ingredientItem Class
     let ingredientItem = []
     currentRecipe.ingredientList.forEach((e,index) => {
         ingredientItem[index] = new ingredient(e)
     })
-    console.log(currentRecipe)
-    console.log(ingredientItem)
+
 // ====================================================================================================================================
 //                                        DISPLAY THE CONTENT IN THE MIDDLE UPON CLICK 
 // ====================================================================================================================================
 
     appendRecipeHeader(currentRecipe.content)
-    appendRecipeDetails(currentRecipe)
+    appendRecipeDetails(currentRecipe,ingredientItem)
+    appendIngredients(ingredientItem)
+    console.log(currentRecipe)
+    console.log(ingredientItem)
 }
 
 // ====================================================================================================================================
@@ -105,8 +140,11 @@ class recipeDisplay {
 
         for (let i = 0 ; i < text.length ; i++) {
             // Once a text is seen, it returns the value
-            if(isNaN(parseFloat(text[i]))){
+            if(isNaN(parseFloat(text[i])) && (text[i] !== '') && (text[i] !== ' ')){
                 return text[i]
+            } else if ((text[i] == '') || (text[i] == ' ') ) {
+                text.splice(i,1)
+                i--
             }
         }
     }
@@ -135,7 +173,8 @@ class recipeDisplay {
         } else {
             // WITHOUT DASH 
             // Checks whether there is only one value to be added
-            if (isNaN(text[1])){
+            // isNaN(parseFloat(text[1]) checks whether second content of the array is a potential value
+            if (isNaN(parseFloat(text[1]))){
                 return eval(text[0]).toFixed(1)
             } else {
                 return (eval(text[0]) + eval(text[1])).toFixed(1)
@@ -147,28 +186,22 @@ class recipeDisplay {
         // this function removes the parenthesis of the string 
         let start = content.split("(")[0]
         let end = content.split(")")[1]
-
-        return (end != undefined) ? `${start} ${end}`: start
+        return (end === undefined) ? start:`${start} ${end}`
     }
 
     getItem(content,unit){
         // call get item description to remove all the close parenthesis
         // for items with no unit, no need to split
         // for items with unit, take the second part of the splitted string
-        return (unit === undefined)? this.getItemDescription(content):this.getItemDescription(content).split(unit)[1]
+        return (unit === '')? this.getItemDescription(content) : this.getItemDescription(content).split(unit)[1]
     }
 
     calcTime() {
         // Assuming that we need 15 min for each 3 ingredients
-        console.log ('calc time has been called')
         const numIng = this.content.ingredients.length;
         const periods = Math.ceil(numIng / 3);
         this.time = periods * 15;
         console.log(this.content)
-    }
-
-    getServings(stat){
-        this.servings = `${this.servings} ${stat} 1`
     }
     
   }
@@ -193,20 +226,34 @@ class recipeDisplay {
         this.description = content
         this.textContent = this.getItemDescription(content).split(' ')
         this.isMeasured = this.isMeasured(this.textContent)
+        this.servings = null
         // Based on whether it's measured or not, the program will take the ingredient's unit and value 
 
         if(this.isMeasured == true){ 
             this.unit = this.getUnit(this.textContent)
             this.value = this.getValue(this.textContent)
         } else {
+            this.unit = ''
             this.value = 1
         } 
 
-        this.item = this.getItem(this.description,this.unit)
+        this.item = this.getItem(this.description,this.unit)        
+    }
 
+    updateValue(action,servings) {
+        if (action === 'add'){
+            this.value = ((servings / 4) * this.value).toFixed(2)
+        } else if (action === 'minus') {
+            this.value = ((this.value / (servings / 4)).toFixed(2))
+        }
     }
 }
 
+class page {
+    constructor (item){
+        this.item = item
+    }
+}
 
 
 //FUNCTIONS
@@ -215,19 +262,97 @@ class recipeDisplay {
 // ==================================================================================================================================================================
 
 const appendResultsList= async function (item) {
-    let newHTML = 
-    `<li>
-        <a class="results__link" href="#${item.recipe_id}">
-            <figure class="results__fig">
-                <img src="${item.image_url}" alt="Test">
-            </figure>
-            <div class="results__data">
-                <h4 class="results__name">${item.title}</h4>
-                <p class="results__author">${item.publisher}</p>
-            </div>
-        </a>
-    </li>`
-    recipeColumn.insertAdjacentHTML('beforeend',newHTML)
+    document.querySelector('.results__pages').innerHTML = ''
+    let pages = item 
+    let maxPages = item.length
+    var currentPage = 1
+
+    // Default Body 
+
+        pages[currentPage - 1].forEach((item) => {
+            returnPageContent(item)
+        })
+
+        document.querySelector('.results__pages').insertAdjacentHTML( 'beforeend', 
+        `
+            <button class="btn-inline results__btn--prev">
+            </button>
+
+            <button class="btn-inline results__btn--next">
+                <span>Page ${currentPage}</span>
+                <svg class="search__icon">
+                    <use href="img/icons.svg#icon-triangle-right"></use>
+                </svg>
+            </button>
+        `)
+    
+    // On-Click Functions 
+
+    let nextButton = document.querySelector('.results__btn--next')
+    let previousButton = document.querySelector('.results__btn--prev')
+
+    nextButton.onclick = async function (){
+
+        if(currentPage < maxPages && currentPage > 0 ){
+        currentPage +=1
+        nextButton.querySelector('span').innerHTML = `Page ${currentPage + 1}`
+        previousButton.innerHTML =                    
+        `<svg class="search__icon">
+            <use href="img/icons.svg#icon-triangle-left"></use>
+        </svg>
+        <span>Page ${currentPage - 1 }</span>`
+
+        nextPage(item,currentPage)
+       } 
+    }
+    
+    previousButton.onclick = async function (){
+        console.log(`current page: ${currentPage}`)
+        if (currentPage > 1){
+            currentPage -=1
+            nextButton.querySelector('span').innerHTML = `Page ${currentPage + 1}`
+            previousButton.querySelector('span').innerHTML = `Page ${currentPage}`
+            prevPage(item,currentPage)
+        } 
+        
+        if (currentPage == 1) {previousButton.innerHTML = ' '}
+        console.log(`current page: ${currentPage}`)
+    }
+
+    // Adjust
+    const nextPage = async function(page,currentPage) {
+        recipeColumn.innerHTML = ' '
+
+        page[currentPage-1].forEach((item) => {
+            returnPageContent(item)
+        })
+    }
+
+    const prevPage = async function(page,currentPage) {
+        recipeColumn.innerHTML = ' '
+
+        page[currentPage-1].forEach((item) => {
+            returnPageContent(item)
+        })
+    }
+
+}
+
+const returnPageContent = async function (item){
+            let newHTML = 
+            `<li>
+                <a class="results__link" href="#${item.recipe_id}">
+                    <figure class="results__fig">
+                        <img src="${item.image_url}" alt="Test">
+                    </figure>
+                    <div class="results__data">
+                        <h4 class="results__name">${item.title}</h4>
+                        <p class="results__author">${item.publisher}</p>
+                    </div>
+                </a>
+            </li>`
+
+        recipeColumn.insertAdjacentHTML('beforeend', newHTML)
 }
 const appendRecipeHeader = async function (item){
     let headerHTML = 
@@ -241,7 +366,7 @@ const appendRecipeHeader = async function (item){
     `
     displayColumn.insertAdjacentHTML('beforeend',headerHTML)
 }
-const appendRecipeDetails = async function (item) {
+const appendRecipeDetails = async function (item,ingredient) {
     item.calcTime()
     let recipe_infoHTML = 
     `
@@ -254,34 +379,167 @@ const appendRecipeDetails = async function (item) {
         <span class="recipe__info-text"> minutes</span>
     </div>
     <div class="recipe__info">
-        <svg class="recipe__info-icon">
+        <svg class="recipe__info-icon" >
             <use href="img/icons.svg#icon-man"></use>
         </svg>
         <span class="recipe__info-data recipe__info-data--people">4</span>
         <span class="recipe__info-text"> servings</span>
 
         <div class="recipe__info-buttons">
-            <button class="btn-tiny">
+            <button class="btn-tiny" id = "minus">
                 <svg>
                     <use href="img/icons.svg#icon-circle-with-minus"></use>
                 </svg>
             </button>
-            <button class="btn-tiny">
+            <button class="btn-tiny" id = "plus">
                 <svg>
                     <use href="img/icons.svg#icon-circle-with-plus"></use>
                 </svg>
             </button>
         </div>
 
+        </div>
+        <button class="recipe__love">
+            <svg class="header__likes">
+                <use href="img/icons.svg#icon-heart-outlined"></use>
+            </svg>
+        </button>
     </div>
-    `
-    let people = document.querySelector('.recipe__info-data recipe__info-data--people')
-    
-    let peopleButton = people.querySelector('.recipe__info-buttons')
-    let choice = peopleButton.getElementsByClassName('btn-tiny')
-    console.log(choice)
-    displayColumn.insertAdjacentHTML('beforeend',recipe_infoHTML)
-}
-// ==================================================================================================================================================================
 
+    <div class="recipe__ingredients">
+        <ul class="recipe__ingredient-list">
+        </ul>
+        <button class="btn-small recipe__btn">
+        <svg class="search__icon">
+            <use href="img/icons.svg#icon-shopping-cart"></use>
+        </svg>
+        <span>Add to shopping list</span>
+    </button>
+    </div>
+
+     <div class="recipe__directions">
+                <h2 class="heading-2">How to cook it</h2>
+                <p class="recipe__directions-text">
+                    This recipe was carefully designed and tested by
+                    <span class="recipe__by">${item.content.publisher}</span>. Please check out directions at their website.
+                </p>
+                <a class="btn-small recipe__btn" href="${item.content.source_url}" target="_blank">
+                    <span>Directions</span>
+                    <svg class="search__icon">
+                        <use href="img/icons.svg#icon-triangle-right"></use>
+                    </svg>
+
+                </a>
+                
+            </div>
+    `
+    displayColumn.insertAdjacentHTML('beforeend',recipe_infoHTML)
+    
+
+    // ON-CLICK BUTTONS
+    // checks whether add or minus button is clicked 
+    // creates and ingredient.serving property to save serving
+    let add = document.getElementById('plus')
+    let minus = document.getElementById('minus')
+    let servings = document.querySelector('.recipe__info-data--people')
+    let like = document.querySelector ('.recipe__love')
+
+    ingredient.servings = eval(servings.innerHTML)
+    
+        add.onclick = async function (){
+            if(ingredient.servings >= 4 && ingredient.servings <= 12 ) {
+            ingredient.servings = eval(ingredient.servings) + 4
+            servings.innerHTML = ingredient.servings 
+
+            // Update the instruction list 
+                ingredient.forEach ((item,index) => {
+                    ingredient[index].updateValue('add',ingredient.servings)
+                })
+                appendIngredients(ingredient)
+                
+                item.time = (item.time * (ingredient.servings / 4))
+                document.querySelector('.recipe__info-data--minutes').innerHTML = item.time
+            }
+        }
+        
+        minus.onclick = async function (){
+            if(ingredient.servings > 4) {
+            ingredient.servings = eval(ingredient.servings) - 4
+            servings.innerHTML = ingredient.servings             
+
+            // Update instruction list
+            ingredient.forEach ((item,index) => {
+                ingredient[index].updateValue('minus',ingredient.servings)
+            })
+            appendIngredients(ingredient)
+            let baseTime = item.time / ((ingredient.servings + 4) / 4)
+            item.time = (baseTime *  (ingredient.servings / 4))
+            document.querySelector('.recipe__info-data--minutes').innerHTML = item.time
+
+            }
+        }
 // ==================================================================================================================================================================
+                                                    // SHOPPING BUTTON CLICK
+// =================================================================================================================================================================
+
+        // SHOPPING LIST RECIPE BUTTON 
+
+        let shoppingButton = document.querySelector('.recipe__btn')
+
+        shoppingButton.onclick = async function () {
+            shoppingListColumn.innerHTML = `
+            <ul class="shopping__list">
+            </ul>`
+            appendShoppingList(ingredient)
+
+            //delete button
+
+            document.onclick = async function (e) {
+                console.log(e.path)
+                if(e.path[1].classList[0] === 'shopping__delete'){
+                    e.path[2].remove()
+                }
+            }
+        }
+
+    }
+const appendIngredients = async function(ingredient){
+    document.querySelector('.recipe__ingredient-list').innerHTML = ' '
+    ingredient.forEach((item,index) => {
+        let newIngredient = 
+        `
+        <li class="recipe__item">
+            <svg class="recipe__icon">
+                <use href="img/icons.svg#icon-check"></use>
+            </svg>
+            <div class="recipe__count">${item.value}</div>
+            <div class="recipe__ingredient">
+                <span class="recipe__unit">${item.unit}</span>
+                ${item.item}
+            </div>
+        </li>
+        `
+        document.querySelector('.recipe__ingredient-list').insertAdjacentHTML('beforeend',newIngredient)
+    })
+}
+
+const appendShoppingList = async function(ingredient){
+    ingredient.forEach((item,index) => {
+        let shoppingList = `
+        <li class="shopping__item">
+            <div class="shopping__count">
+                <input type="number" value="${item.value}" step="0.1">
+                <p>${item.unit}</p>
+            </div>
+            <p class="shopping__description">${item.item}</p>
+            <button class="shopping__delete btn-tiny">
+                <svg>
+                    <use href="img/icons.svg#icon-circle-with-cross"></use>
+                </svg>
+            </button>
+        </li>
+        `
+        document.querySelector('.shopping__list').insertAdjacentHTML('beforeend',shoppingList)
+    
+    })
+}
