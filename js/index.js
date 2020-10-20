@@ -63,7 +63,7 @@ document.querySelector('.results__list').onclick = async function(e) {
     async function update(){
         try {
             hasPreviews = await checkStat(hasPreviews)
-            document.querySelector('.recipe').innerHTML = ' '
+            displayColumn.innerHTML = ' '
             document.querySelector('.results__link--active').classList.remove('results__link--active')
         } catch (err){
             hasPreviews = false
@@ -116,6 +116,8 @@ class recipeDisplay {
             } else if ((text[i] == '') || (text[i] == ' ') ) {
                 text.splice(i,1)
                 i--
+            } else if (this.isDashed(text[i])){
+                return text[i]
             }
         }
     }
@@ -124,12 +126,21 @@ class recipeDisplay {
         // CHECK FOR PRESENCE OF DASH
         // 1. Split the word per character
         var content = item.split('')
+        console.log(`This is what content contains: ${content}`)
+        console.log(`This is the length of the content: ${content.length}`)
 
         // 2. IF '-' found; returns TRUE
         for( let i = 0; i < content.length ; i++){
-            if (content[i] == '-') { return true } 
-        }
+            console.log(`Current Index: ${i}`)
+            console.log(`curent content: ${content[i]}`)
+            if (content[i] == '-' && (!isNaN(content[i+1]))) { 
+                return true 
+            } else if (content[i] == '-' && (isNaN(content[i+1]))) {
+                return 'dashed unit'
+            }
+        
         return false
+         }
     }
 
     getValue(text) {   
@@ -146,8 +157,16 @@ class recipeDisplay {
             // Checks whether there is only one value to be added
             // isNaN(parseFloat(text[1]) checks whether second content of the array is a potential value
             if (isNaN(parseFloat(text[1]))){
-                return eval(text[0]).toFixed(1)
+                if(!isNaN((text[0]))){
+                    return eval(text[0]).toFixed(1)
+                } else {
+                    return 1
+                }
+            } else if (this.isDashed(text[0]) === false && this.isMeasured === true) {
+                return text[0]
             } else {
+                console.log(`(eval(text[0]) + eval(text[1])).toFixed(1)`)
+                console.log(`Text0 : ${text[0]}, text1: ${text[1]}`)
                 return (eval(text[0]) + eval(text[1])).toFixed(1)
             }
         }
@@ -214,7 +233,7 @@ class recipeDisplay {
         if (action === 'add'){
             this.value = ((servings / 4) * this.value).toFixed(2)
         } else if (action === 'minus') {
-            this.value = ((this.value / (servings / 4)).toFixed(2))
+            this.value = ((this.value / ((servings+4)/ 4)).toFixed(2))
         }
     }
 }
@@ -236,7 +255,9 @@ const newRecipe = async function (id) {
     // Creates ingredientItem Class
     ingredientItem = []
     currentRecipe.ingredientList.forEach((e,index) => {
+        console.log(`E: ${e} and Index: ${index}`)
         ingredientItem[index] = new ingredient(e)
+        console.log(ingredientItem[index])
     })
     // Append Display
     appendRecipeHeader(currentRecipe.content)
@@ -420,7 +441,7 @@ const appendRecipeDetails = async function (item , ingredient) {
     let servings = document.querySelector('.recipe__info-data--people')
     let like = document.querySelector ('.recipe__love')
     let likeList = document.querySelector('.likes__list')
-
+    const baseTime = item.time
     ingredient.servings = eval(servings.innerHTML)
 
         add.onclick = async function (){
@@ -449,8 +470,9 @@ const appendRecipeDetails = async function (item , ingredient) {
                 ingredient[index].updateValue('minus',ingredient.servings)
             })
             appendIngredients(ingredient)
-            let baseTime = item.time / ((ingredient.servings + 4) / 4)
-            item.time = (baseTime *  (ingredient.servings / 4))
+            console.log(`Ingredient Servings : ${ingredient.servings}`)
+            console.log(`BaseTime: ${baseTime}`)
+            item.time = (baseTime *  (ingredient.servings / 4)) 
             document.querySelector('.recipe__info-data--minutes').innerHTML = item.time
             }
         }
@@ -478,8 +500,8 @@ const appendRecipeDetails = async function (item , ingredient) {
             let recipeID = e.path[2].hash.split('#')[1]
             // Stored Value = '#1132' to remove the # -> use Split
 
-            for( i = 0 ; i < recipeList.item.length ; i++) {
-            if (recipeList.item[i].recipe_id === recipeID){
+            for( i = 0 ; i < recipeList.length ; i++) {
+            if (recipeList[i].recipe_id === recipeID){
                     displayColumn.innerHTML = ''
                     await newRecipe(recipeID)
                 }
@@ -513,20 +535,23 @@ const appendRecipeDetails = async function (item , ingredient) {
 const appendIngredients = async function(ingredient){
     document.querySelector('.recipe__ingredient-list').innerHTML = ' '
     ingredient.forEach((item,index) => {
-        let newIngredient = 
-        `
-        <li class="recipe__item">
-            <svg class="recipe__icon">
-                <use href="img/icons.svg#icon-check"></use>
-            </svg>
-            <div class="recipe__count">${item.value}</div>
-            <div class="recipe__ingredient">
-                <span class="recipe__unit">${item.unit}</span>
-                ${item.item}
-            </div>
-        </li>
-        `
-        document.querySelector('.recipe__ingredient-list').insertAdjacentHTML('beforeend',newIngredient)
+        if (item.item != ' '){
+            let newIngredient = 
+            `
+            <li class="recipe__item">
+                <svg class="recipe__icon">
+                    <use href="img/icons.svg#icon-check"></use>
+                </svg>
+                <div class="recipe__count">${item.value}</div>
+                <div class="recipe__ingredient">
+                    <span class="recipe__unit">${item.unit}</span>
+                    ${item.item}
+                </div>
+            </li>
+            `
+            document.querySelector('.recipe__ingredient-list').insertAdjacentHTML('beforeend',newIngredient)
+    
+        }
     })
 }
 
