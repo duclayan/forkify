@@ -6,9 +6,10 @@ var recipeColumn = document.querySelector('.results__list')
 var displayColumn = document.querySelector('.recipe')
 var addToCart = document.querySelector('.btn-small.recipe__btn')
 var shoppingListColumn = document.querySelector('.shopping')
-console.log(addToCart)
+var buttonDiv = document.querySelector('.results__pages')
+var recipeList , currentRecipe , ingredientItem
+var pages = []
 
-var searchResult =''
 
 const searchRecipe = async function(query){
     let result = await fetch(`https://forkify-api.herokuapp.com/api/search?q=${query}`)
@@ -24,20 +25,19 @@ const getRecipe = async function(id) {
 // ====================================================================================================================================
 
 searchForm.onsubmit = async function (e) {
+        // Function gets triggered once user submits search
+        // Empties the recipe Column
         recipeColumn.innerHTML = ''
 
         e.preventDefault()
-        var recipeList= await searchRecipe(searchItem.value)
-        recipeList = new page (recipeList.recipes)
-        console.log(recipeList)
-        // appendResultsList(recipeList.recipes)
-
-        var pages = []
-        for (let i = 0 ; i < Math.ceil(recipeList.item.length / 10); i++) {
-            if ( (i+1) === Math.ceil(recipeList.item.length / 10)) {
-                pages[i] = recipeList.item.slice(i,i+(recipeList.item.length % 10))
+        recipeList= await searchRecipe(searchItem.value)
+        recipeList = recipeList.recipes
+        
+        for (let i = 0 ; i < Math.ceil(recipeList.length / 10); i++) {
+            if ( (i+1) === Math.ceil(recipeList.length / 10)) {
+                pages[i] = recipeList.slice(i,i+(recipeList.length % 10))
             } else {
-                pages[i] = recipeList.item.slice(i,i+10)
+                pages[i] = recipeList.slice(i,i+10)
             }
         }
 
@@ -53,28 +53,22 @@ document.querySelector('.results__list').onclick = async function(e) {
     function checkStat(status) {
         return new Promise((resolve,reject) => {
             if (status === true) {
-                console.log('true')
                 resolve (true)
             } else {
-                console.log('false')
                 reject (false)
             }
         })
     }
 
     async function update(){
-        console.log(hasPreviews)
         try {
             hasPreviews = await checkStat(hasPreviews)
-            console.log('success')
             document.querySelector('.recipe').innerHTML = ' '
             document.querySelector('.results__link--active').classList.remove('results__link--active')
         } catch (err){
-            console.log('error')
             hasPreviews = false
         }
     }
-
 
     e.preventDefault()
     hasPreviews = true
@@ -86,31 +80,8 @@ document.querySelector('.results__list').onclick = async function(e) {
     //story current class
     e.path[n].classList.add('results__link--active')
     let recipeID = e.path[n].href.split("#")
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
-    let currentRecipe = await getRecipe(recipeID[1])
-    let title = currentRecipe.recipe
-    let ingredients = currentRecipe.recipe.ingredients
+    await newRecipe(recipeID[1])
 
-    // Create SUPER Class/ General Class 
-    currentRecipe = new recipeDisplay(title,ingredients)
-    console.log('CURRENT RECIPE')
-    console.log(currentRecipe)
-    
-    // Creates ingredientItem Class
-    let ingredientItem = []
-    currentRecipe.ingredientList.forEach((e,index) => {
-        ingredientItem[index] = new ingredient(e)
-    })
-
-// ====================================================================================================================================
-//                                        DISPLAY THE CONTENT IN THE MIDDLE UPON CLICK 
-// ====================================================================================================================================
-
-    appendRecipeHeader(currentRecipe.content)
-    appendRecipeDetails(currentRecipe,ingredientItem)
-    appendIngredients(ingredientItem)
-    console.log(currentRecipe)
-    console.log(ingredientItem)
 }
 
 // ====================================================================================================================================
@@ -201,7 +172,6 @@ class recipeDisplay {
         const numIng = this.content.ingredients.length;
         const periods = Math.ceil(numIng / 3);
         this.time = periods * 15;
-        console.log(this.content)
     }
     
   }
@@ -249,20 +219,33 @@ class recipeDisplay {
     }
 }
 
-class page {
-    constructor (item){
-        this.item = item
-    }
+
+// ==================================================================================================================================================================
+//                                                       FUNCTIONS
+// ==================================================================================================================================================================
+
+const newRecipe = async function (id) {
+
+    currentRecipe = await getRecipe(id)
+    let title = currentRecipe.recipe
+    let ingredients = currentRecipe.recipe.ingredients
+
+    // Create SUPER Class/ General Class 
+    currentRecipe = new recipeDisplay(title,ingredients)
+    
+    // Creates ingredientItem Class
+    ingredientItem = []
+    currentRecipe.ingredientList.forEach((e,index) => {
+        ingredientItem[index] = new ingredient(e)
+    })
+    // Append Display
+    appendRecipeHeader(currentRecipe.content)
+    appendRecipeDetails(currentRecipe,ingredientItem)
+    appendIngredients(ingredientItem)
 }
 
-
-//FUNCTIONS
-// ==================================================================================================================================================================
-
-// ==================================================================================================================================================================
-
 const appendResultsList= async function (item) {
-    document.querySelector('.results__pages').innerHTML = ''
+    buttonDiv.innerHTML = ''
     let pages = item 
     let maxPages = item.length
     var currentPage = 1
@@ -273,7 +256,7 @@ const appendResultsList= async function (item) {
             returnPageContent(item)
         })
 
-        document.querySelector('.results__pages').insertAdjacentHTML( 'beforeend', 
+        buttonDiv.insertAdjacentHTML( 'beforeend', 
         `
             <button class="btn-inline results__btn--prev">
             </button>
@@ -286,43 +269,37 @@ const appendResultsList= async function (item) {
             </button>
         `)
     
-    // On-Click Functions 
 
+    // On-Click Functions 
     let nextButton = document.querySelector('.results__btn--next')
     let previousButton = document.querySelector('.results__btn--prev')
 
     nextButton.onclick = async function (){
-
         if(currentPage < maxPages && currentPage > 0 ){
-        currentPage +=1
-        nextButton.querySelector('span').innerHTML = `Page ${currentPage + 1}`
-        previousButton.innerHTML =                    
-        `<svg class="search__icon">
-            <use href="img/icons.svg#icon-triangle-left"></use>
-        </svg>
-        <span>Page ${currentPage - 1 }</span>`
+            currentPage +=1
+            nextButton.querySelector('span').innerHTML = `Page ${currentPage + 1}`
+            previousButton.innerHTML =                    
+            `<svg class="search__icon">
+                <use href="img/icons.svg#icon-triangle-left"></use>
+            </svg>
+            <span>Page ${currentPage - 1 }</span>`
 
-        nextPage(item,currentPage)
-       } 
+            nextPage(item,currentPage)
+        } 
     }
     
     previousButton.onclick = async function (){
-        console.log(`current page: ${currentPage}`)
-        if (currentPage > 1){
+        if (currentPage > 1) {
             currentPage -=1
             nextButton.querySelector('span').innerHTML = `Page ${currentPage + 1}`
             previousButton.querySelector('span').innerHTML = `Page ${currentPage}`
             prevPage(item,currentPage)
-        } 
-        
-        if (currentPage == 1) {previousButton.innerHTML = ' '}
-        console.log(`current page: ${currentPage}`)
+        } else if (currentPage == 1) { previousButton.innerHTML = ' '}
     }
 
     // Adjust
     const nextPage = async function(page,currentPage) {
         recipeColumn.innerHTML = ' '
-
         page[currentPage-1].forEach((item) => {
             returnPageContent(item)
         })
@@ -330,7 +307,6 @@ const appendResultsList= async function (item) {
 
     const prevPage = async function(page,currentPage) {
         recipeColumn.innerHTML = ' '
-
         page[currentPage-1].forEach((item) => {
             returnPageContent(item)
         })
@@ -366,7 +342,7 @@ const appendRecipeHeader = async function (item){
     `
     displayColumn.insertAdjacentHTML('beforeend',headerHTML)
 }
-const appendRecipeDetails = async function (item,ingredient) {
+const appendRecipeDetails = async function (item , ingredient) {
     item.calcTime()
     let recipe_infoHTML = 
     `
@@ -443,9 +419,10 @@ const appendRecipeDetails = async function (item,ingredient) {
     let minus = document.getElementById('minus')
     let servings = document.querySelector('.recipe__info-data--people')
     let like = document.querySelector ('.recipe__love')
+    let likeList = document.querySelector('.likes__list')
 
     ingredient.servings = eval(servings.innerHTML)
-    
+
         add.onclick = async function (){
             if(ingredient.servings >= 4 && ingredient.servings <= 12 ) {
             ingredient.servings = eval(ingredient.servings) + 4
@@ -461,7 +438,7 @@ const appendRecipeDetails = async function (item,ingredient) {
                 document.querySelector('.recipe__info-data--minutes').innerHTML = item.time
             }
         }
-        
+
         minus.onclick = async function (){
             if(ingredient.servings > 4) {
             ingredient.servings = eval(ingredient.servings) - 4
@@ -475,10 +452,40 @@ const appendRecipeDetails = async function (item,ingredient) {
             let baseTime = item.time / ((ingredient.servings + 4) / 4)
             item.time = (baseTime *  (ingredient.servings / 4))
             document.querySelector('.recipe__info-data--minutes').innerHTML = item.time
-
             }
         }
-// ==================================================================================================================================================================
+
+        like.onclick = async function () {
+            // Updates the like list by adding the liked recipe to the end of list
+            document.querySelector('.likes__list').insertAdjacentHTML('beforeend',
+            `
+            <li>
+                <a class="likes__link" href="#${item.content.recipe_id}">
+                    <figure class="likes__fig">
+                        <img src="${item.content.image_url}" alt="Test">
+                    </figure>
+                    <div class="likes__data">
+                        <h4 class="likes__name">${item.content.title}</h4>
+                        <p class="likes__author">${item.content.publisher}</p>
+                    </div>
+                </a>
+            </li>
+        `)
+        }
+
+        likeList.onclick = async function (e) {
+            // Take in Recipe ID -> Find Matching ID -> Clear Display HTML -> Display Recipe
+            let recipeID = e.path[2].hash.split('#')[1]
+            // Stored Value = '#1132' to remove the # -> use Split
+
+            for( i = 0 ; i < recipeList.item.length ; i++) {
+            if (recipeList.item[i].recipe_id === recipeID){
+                    displayColumn.innerHTML = ''
+                    await newRecipe(recipeID)
+                }
+            }
+        }
+ // ==================================================================================================================================================================
                                                     // SHOPPING BUTTON CLICK
 // =================================================================================================================================================================
 
