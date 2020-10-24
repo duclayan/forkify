@@ -126,13 +126,9 @@ class recipeDisplay {
         // CHECK FOR PRESENCE OF DASH
         // 1. Split the word per character
         var content = item.split('')
-        console.log(`This is what content contains: ${content}`)
-        console.log(`This is the length of the content: ${content.length}`)
 
         // 2. IF '-' found; returns TRUE
         for( let i = 0; i < content.length ; i++){
-            console.log(`Current Index: ${i}`)
-            console.log(`curent content: ${content[i]}`)
             if (content[i] == '-' && (!isNaN(content[i+1]))) { 
                 return true 
             } else if (content[i] == '-' && (isNaN(content[i+1]))) {
@@ -165,8 +161,6 @@ class recipeDisplay {
             } else if (this.isDashed(text[0]) === false && this.isMeasured === true) {
                 return text[0]
             } else {
-                console.log(`(eval(text[0]) + eval(text[1])).toFixed(1)`)
-                console.log(`Text0 : ${text[0]}, text1: ${text[1]}`)
                 return (eval(text[0]) + eval(text[1])).toFixed(1)
             }
         }
@@ -255,9 +249,7 @@ const newRecipe = async function (id) {
     // Creates ingredientItem Class
     ingredientItem = []
     currentRecipe.ingredientList.forEach((e,index) => {
-        console.log(`E: ${e} and Index: ${index}`)
         ingredientItem[index] = new ingredient(e)
-        console.log(ingredientItem[index])
     })
     // Append Display
     appendRecipeHeader(currentRecipe.content)
@@ -283,7 +275,7 @@ const appendResultsList= async function (item) {
             </button>
 
             <button class="btn-inline results__btn--next">
-                <span>Page ${currentPage}</span>
+                <span>Page 2</span>
                 <svg class="search__icon">
                     <use href="img/icons.svg#icon-triangle-right"></use>
                 </svg>
@@ -310,12 +302,17 @@ const appendResultsList= async function (item) {
     }
     
     previousButton.onclick = async function (){
-        if (currentPage > 1) {
+        console.log(currentPage)
+        
+        if (currentPage > 2) {
             currentPage -=1
-            nextButton.querySelector('span').innerHTML = `Page ${currentPage + 1}`
-            previousButton.querySelector('span').innerHTML = `Page ${currentPage}`
-            prevPage(item,currentPage)
-        } else if (currentPage == 1) { previousButton.innerHTML = ' '}
+            previousButton.querySelector('span').innerHTML = `Page ${currentPage - 1}`
+        } else if (currentPage == 2) { 
+            currentPage -=1
+            previousButton.innerHTML = ' '}
+
+        nextButton.querySelector('span').innerHTML = `Page ${currentPage + 1}`
+        prevPage(item,currentPage)
     }
 
     // Adjust
@@ -470,8 +467,6 @@ const appendRecipeDetails = async function (item , ingredient) {
                 ingredient[index].updateValue('minus',ingredient.servings)
             })
             appendIngredients(ingredient)
-            console.log(`Ingredient Servings : ${ingredient.servings}`)
-            console.log(`BaseTime: ${baseTime}`)
             item.time = (baseTime *  (ingredient.servings / 4)) 
             document.querySelector('.recipe__info-data--minutes').innerHTML = item.time
             }
@@ -524,7 +519,6 @@ const appendRecipeDetails = async function (item , ingredient) {
             //delete button
 
             document.onclick = async function (e) {
-                console.log(e.path)
                 if(e.path[1].classList[0] === 'shopping__delete'){
                     e.path[2].remove()
                 }
