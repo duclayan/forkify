@@ -188,7 +188,6 @@ class recipeDisplay {
     }
     
   }
-
   class ingredient extends recipeDisplay {
 
     constructor(content,currentRecipe,ingredients){
@@ -524,7 +523,6 @@ const appendRecipeDetails = async function (item , ingredient) {
                 }
             }
         }
-
     }
 const appendIngredients = async function(ingredient){
     document.querySelector('.recipe__ingredient-list').innerHTML = ' '
